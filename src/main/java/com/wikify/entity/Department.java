@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.Optional;
+
 @Entity
 @Table(name = "departments")
 @Getter
@@ -28,4 +31,5 @@ public class Department {
         this.name = name;
         this.slug = slug;
     }
+
 }

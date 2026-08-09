@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     Optional<Department> findBySlug(String slug);
     boolean existsBySlug(String slug);
+    Optional<Department> findById(Long id);
 }
