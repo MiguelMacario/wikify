@@ -1,7 +1,8 @@
 package com.wikify.entity;
 
-import com.wikify.entity.enums.Role;
+import com.wikify.entity.enums.SystemRole;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,7 +11,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 @Entity
@@ -18,6 +21,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -33,21 +37,27 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
-    private Role role;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "system_role", nullable = false)
+    private SystemRole systemRole;
 
-    public User(String login, String encryptedPassword, Role role) {
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<DepartmentMembership> memberships = new HashSet<>();
+
+    public User(String login, String encryptedPassword, String email, SystemRole systemRole, String name) {
         this.login = login;
         this.password = encryptedPassword;
-        this.role = role;
+        this.systemRole = systemRole;
+        this.name = name;
+        this.email = email;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if(role == Role.ADMIN) {
-            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
-        } else{
-            return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        if (systemRole == SystemRole.SYSADMIN) {
+            return List.of(new SimpleGrantedAuthority("ROLE_SYSADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
         }
+        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
