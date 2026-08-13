@@ -21,8 +21,14 @@ public class DepartmentSecurity {
         return idsWhere(user, role -> role == DepartmentRole.MANAGER);
     }
 
-    public boolean isMember(User user, Long departmentId) {
+    public boolean canRead(User user, Long departmentId) {
         return roleIn(user, departmentId).isPresent();
+    }
+
+    public boolean canContribute(User user, Long departmentId) {
+        return roleIn(user, departmentId)
+                .filter(role -> role == DepartmentRole.MANAGER || role == DepartmentRole.MEMBER)
+                .isPresent();
     }
 
     public boolean isManager(User user, Long departmentId) {

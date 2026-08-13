@@ -27,8 +27,6 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResult login(String login, String password) {
-        // Lança AuthenticationException (usuário inexistente e senha errada caem no mesmo erro,
-        // então não há como distinguir os dois de fora)
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(login, password));
 
@@ -41,8 +39,6 @@ public class AuthService {
             throw new BadCredentialsException("Refresh token inválido ou expirado");
         }
 
-        // Recarrega do banco: papel global e vínculos de departamento podem ter mudado
-        // desde a emissão do refresh token
         User user = userRepository.findByLogin(login)
                 .orElseThrow(() -> new BadCredentialsException("Refresh token inválido ou expirado"));
 
@@ -57,9 +53,6 @@ public class AuthService {
         }
 
         String encodedPassword = passwordEncoder.encode(data.password());
-
-        // O papel nunca vem do cliente. O usuário nasce sem departamento: só passa a
-        // enxergar conteúdo quando um gestor o adicionar a algum.
         User newUser = new User(
                 data.login(),
                 encodedPassword,

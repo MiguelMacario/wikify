@@ -43,7 +43,6 @@ public class TokenService {
 
     public String generateRefreshToken(String login) {
         try{
-            // Payload mínimo: o refresh token só identifica quem está renovando
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(login)
