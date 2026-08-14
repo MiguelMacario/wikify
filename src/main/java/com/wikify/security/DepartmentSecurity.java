@@ -1,8 +1,10 @@
 package com.wikify.security;
 
 import com.wikify.entity.DepartmentMembership;
+import com.wikify.entity.Document;
 import com.wikify.entity.User;
 import com.wikify.entity.enums.DepartmentRole;
+import com.wikify.entity.enums.EditPolicy;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -35,6 +37,30 @@ public class DepartmentSecurity {
         return roleIn(user, departmentId)
                 .filter(role -> role == DepartmentRole.MANAGER)
                 .isPresent();
+    }
+
+    public boolean canPublish(User user, Long departmentId) {
+        return canContribute(user, departmentId);
+    }
+
+    public boolean canEdit(User user, Document document) {
+        if (user == null || document == null) {
+            return false;
+        }
+
+        Long departmentId = document.getDepartment().getId();
+
+        if (isManager(user, departmentId)) {
+            return true;
+        }
+        if (!canContribute(user, departmentId)) {
+            return false;
+        }
+        if (user.getId().equals(document.getCreatedBy().getId())) {
+            return true;
+        }
+
+        return document.getEditPolicy() == EditPolicy.DEPARTMENT;
     }
 
     public Optional<DepartmentRole> roleIn(User user, Long departmentId) {

@@ -1,6 +1,7 @@
 package com.wikify.entity;
 
 
+import com.wikify.entity.enums.EditPolicy;
 import com.wikify.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -46,6 +48,14 @@ public class Document {
     @Column(nullable = false)
     private Status status = Status.DRAFT;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "edit_policy", nullable = false)
+    private EditPolicy editPolicy = EditPolicy.DEPARTMENT;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
+
     @Column(columnDefinition = "TEXT", nullable = false, name = "content_markdown")
     private String contentMarkdown;
 
@@ -53,15 +63,17 @@ public class Document {
     @CreationTimestamp
     private LocalDateTime createdAt;
     @Column(name = "updated_at")
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    public Document(String title,String contentMarkdown , Department department ,String slug, String path, int position) {
+    public Document(String title,String contentMarkdown , Department department ,String slug, String path, int position, User createdBy) {
         this.title = title;
         this.contentMarkdown = contentMarkdown;
         this.slug = slug;
         this.path = path;
         this.department = department;
         this.position = position;
+        this.createdBy = createdBy;
     }
 
     public boolean isRoot() {
