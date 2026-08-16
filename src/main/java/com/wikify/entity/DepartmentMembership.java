@@ -2,9 +2,7 @@ package com.wikify.entity;
 
 import com.wikify.entity.enums.DepartmentRole;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 
 @Entity
@@ -12,9 +10,10 @@ import lombok.Setter;
         name = "department_membership",
         uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "department_id"})
 )
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DepartmentMembership {
 
     @Id

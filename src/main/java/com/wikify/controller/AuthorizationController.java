@@ -5,6 +5,7 @@ import com.wikify.dto.LoginResponseDTO;
 import com.wikify.dto.RegisterDTO;
 import com.wikify.security.AuthService;
 import com.wikify.security.AuthResult;
+import com.wikify.security.MediaTokenCookie;
 import com.wikify.security.RefreshTokenCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -22,16 +23,20 @@ public class AuthorizationController {
 
     private final AuthService authService;
     private final RefreshTokenCookie refreshTokenCookie;
+    private final MediaTokenCookie mediaTokenCookie;
 
-    public AuthorizationController(AuthService authService, RefreshTokenCookie refreshTokenCookie) {
+    public AuthorizationController(AuthService authService,
+                                   RefreshTokenCookie refreshTokenCookie,
+                                   MediaTokenCookie mediaTokenCookie) {
         this.authService = authService;
         this.refreshTokenCookie = refreshTokenCookie;
+        this.mediaTokenCookie = mediaTokenCookie;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody AuthenticationDTO data ){
         try {
-            return withRefreshCookie(authService.login(data.login(), data.password()));
+            return withCookies(authService.login(data.login(), data.password()));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -41,10 +46,11 @@ public class AuthorizationController {
     public ResponseEntity<LoginResponseDTO> refresh(
             @CookieValue(name = RefreshTokenCookie.NAME, required = false) String refreshToken) {
         try {
-            return withRefreshCookie(authService.refresh(refreshToken));
+            return withCookies(authService.refresh(refreshToken));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.expire().toString())
+                    .header(HttpHeaders.SET_COOKIE, mediaTokenCookie.expire().toString())
                     .build();
         }
     }
@@ -53,6 +59,7 @@ public class AuthorizationController {
     public ResponseEntity<Void> logout() {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.expire().toString())
+                .header(HttpHeaders.SET_COOKIE, mediaTokenCookie.expire().toString())
                 .build();
     }
 
@@ -66,9 +73,10 @@ public class AuthorizationController {
         }
     }
 
-    private ResponseEntity<LoginResponseDTO> withRefreshCookie(AuthResult result) {
+    private ResponseEntity<LoginResponseDTO> withCookies(AuthResult result) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.create(result.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, mediaTokenCookie.create(result.mediaToken()).toString())
                 .body(result.response());
     }
 }

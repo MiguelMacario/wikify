@@ -3,6 +3,7 @@ package com.wikify.controller;
 import com.wikify.dto.CreateDepartmentRequest;
 import com.wikify.dto.DepartmentDTO;
 import com.wikify.dto.MemberDTO;
+import com.wikify.dto.MemberResponse;
 import com.wikify.services.DepartmentService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,12 @@ public class DepartmentController {
         }  catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
+    }
+
+    @GetMapping("/{id}/members")
+    @PreAuthorize("hasRole('SYSADMIN') or @departmentSecurity.isManager(authentication.principal, #id)")
+    public ResponseEntity<List<MemberResponse>> getMembers(@PathVariable Long id) {
+        return ResponseEntity.ok(departmentService.getMembers(id));
     }
 
     @PostMapping("/{id}/members")

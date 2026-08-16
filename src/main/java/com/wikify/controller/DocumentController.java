@@ -5,6 +5,7 @@ import com.wikify.entity.User;
 import com.wikify.services.DocumentService;
 import com.wikify.services.RevisionService;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +17,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/docs")
+@RequiredArgsConstructor
 public class DocumentController {
 
     private final DocumentService documentService;
     private final RevisionService revisionService;
-
-    public DocumentController(DocumentService documentService, RevisionService revisionService) {
-        this.documentService = documentService;
-        this.revisionService = revisionService;
-    }
 
     @PostMapping
     public ResponseEntity<DocumentResponse> createDocument(@RequestBody CreateDocumentRequest createDocumentRequest, @AuthenticationPrincipal User user) {
@@ -100,6 +97,53 @@ public class DocumentController {
     public ResponseEntity<List<DocumentSearchProjection>> search(@RequestParam("q") String q, @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(documentService.search(q, user));
     }
+
+    @GetMapping("/{id}/edit")
+    public ResponseEntity<DocumentResponse> getDraft(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        try {
+            return ResponseEntity.ok(documentService.getForEdit(id, user));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/edit/{departmentId}")
+    public ResponseEntity<List<DocumentResponse>> getDraftDocuments(@PathVariable Long departmentId ,@AuthenticationPrincipal User user) {
+        try {
+            return ResponseEntity.ok(documentService.getDrafts(departmentId, user));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{departmentId}")
+    public ResponseEntity<List<DocumentResponse>> getDepartmentDocuments(@PathVariable Long departmentId ,@AuthenticationPrincipal User user) {
+        try {
+            return ResponseEntity.ok(documentService.getDepartmentDocuments(departmentId, user));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{id}/unpublish")
+    public ResponseEntity<Void> unpublishDocument(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        try {
+            documentService.unpublishDocument(id, user);
+            return ResponseEntity.ok().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+
 
     @GetMapping("/{id}/revisions")
     public ResponseEntity<List<RevisionDTO>> getRevisions(@PathVariable Long id, @AuthenticationPrincipal User user) {

@@ -39,6 +39,11 @@ public class DepartmentSecurity {
                 .isPresent();
     }
 
+    /** Gere pelo menos um departamento — usado para liberar telas administrativas. */
+    public boolean isAnyManager(User user) {
+        return !managedDepartmentIds(user).isEmpty();
+    }
+
     public boolean canPublish(User user, Long departmentId) {
         return canContribute(user, departmentId);
     }

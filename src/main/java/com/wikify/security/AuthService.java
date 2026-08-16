@@ -75,6 +75,9 @@ public class AuthService {
                 user.getSystemRole(),
                 departments);
 
-        return new AuthResult(tokenService.generateRefreshToken(user.getLogin()), response);
+        return new AuthResult(
+                tokenService.generateRefreshToken(user.getLogin()),
+                tokenService.generateMediaToken(user.getLogin()),
+                response);
     }
 }

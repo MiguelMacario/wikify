@@ -1,20 +1,17 @@
 package com.wikify.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.Optional;
 
 @Entity
 @Table(name = "departments")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Department {
 
     @Id
@@ -26,10 +23,5 @@ public class Department {
 
     @Column(unique = true, nullable = false)
     private String slug;
-
-    public Department(String name, String slug) {
-        this.name = name;
-        this.slug = slug;
-    }
 
 }

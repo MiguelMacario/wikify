@@ -18,6 +18,7 @@ public class TokenService {
     private static final String TYPE_CLAIM = "type";
     private static final String ACCESS_TYPE = "access";
     private static final String REFRESH_TYPE = "refresh";
+    private static final String MEDIA_TYPE = "media";
 
     private static final long ACCESS_TOKEN_EXPIRATION_SECONDS = 2 * 60 * 60;
     public static final long REFRESH_TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60;
@@ -54,12 +55,40 @@ public class TokenService {
         }
     }
 
+    /**
+     * Token só para servir arquivo.
+     *
+     * Existe porque &lt;img&gt; e &lt;video&gt; são requisições do navegador: elas
+     * não carregam o header Authorization, só cookies. Como a claim `type` é
+     * "media", ele NÃO passa no validateAccessToken — não autentica nenhum
+     * outro endpoint, nem que alguém o mande no header.
+     *
+     * Sem papéis dentro: a permissão continua sendo avaliada no banco a cada
+     * requisição, como no resto do sistema.
+     */
+    public String generateMediaToken(String login) {
+        try{
+            return JWT.create()
+                    .withIssuer(ISSUER)
+                    .withSubject(login)
+                    .withClaim(TYPE_CLAIM, MEDIA_TYPE)
+                    .withExpiresAt(expiresIn(REFRESH_TOKEN_EXPIRATION_SECONDS))
+                    .sign(algorithm());
+        } catch(JWTCreationException exception){
+            throw new RuntimeException("JWT media token creation exception", exception);
+        }
+    }
+
     public String validateAccessToken(String token){
         return subjectOf(token, ACCESS_TYPE);
     }
 
     public String validateRefreshToken(String token){
         return subjectOf(token, REFRESH_TYPE);
+    }
+
+    public String validateMediaToken(String token){
+        return subjectOf(token, MEDIA_TYPE);
     }
 
     private String subjectOf(String token, String expectedType){

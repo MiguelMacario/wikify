@@ -4,10 +4,7 @@ package com.wikify.entity;
 import com.wikify.entity.enums.EditPolicy;
 import com.wikify.entity.enums.Status;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -17,8 +14,8 @@ import java.time.LocalDateTime;
 @Table(name = "documents")
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
+@Data
+@Builder
 public class Document {
 
     @Id
@@ -66,15 +63,9 @@ public class Document {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    public Document(String title,String contentMarkdown , Department department ,String slug, String path, int position, User createdBy) {
-        this.title = title;
-        this.contentMarkdown = contentMarkdown;
-        this.slug = slug;
-        this.path = path;
-        this.department = department;
-        this.position = position;
-        this.createdBy = createdBy;
-    }
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
 
     public boolean isRoot() {
         return parent == null;

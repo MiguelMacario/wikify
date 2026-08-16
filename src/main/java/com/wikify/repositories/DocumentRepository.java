@@ -3,6 +3,7 @@ package com.wikify.repositories;
 import com.wikify.dto.DocumentSearchProjection;
 import com.wikify.entity.Document;
 import com.wikify.entity.enums.Status;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -16,8 +17,12 @@ import java.util.Set;
 public interface DocumentRepository extends JpaRepository<Document, Long> {
     boolean existsByPath(String path);
 
+    @EntityGraph(attributePaths = "createdBy")
     List<Document> findByDepartmentIdAndStatus(Long departmentId, Status status);
 
+    Optional<Document> findByIdAndStatus(Long id, Status status);
+
+    @EntityGraph(attributePaths = "createdBy")
     Optional<Document> findByPathAndStatusAndDepartmentIdIn(String path, Status status, Set<Long> readableIds);
 
     List<Document> findByDepartmentIdInAndStatusOrderByPositionAscTitleAsc(Set<Long> readableIds, Status status);

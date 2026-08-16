@@ -15,12 +15,14 @@ import com.wikify.repositories.RevisionRepository;
 import com.wikify.repositories.UserRepository;
 import com.wikify.security.DepartmentSecurity;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CharsetDecoder;
@@ -33,19 +35,13 @@ import java.util.regex.Pattern;
 
 
 @Service
+@RequiredArgsConstructor
 public class DocumentService{
 
     private final DocumentRepository documentRepository;
     private final DepartmentRepository departmentRepository;
     private final RevisionRepository revisionRepository;
     private final DepartmentSecurity departmentSecurity;
-
-    public DocumentService(DocumentRepository documentRepository, DepartmentRepository departmentRepository, RevisionRepository revisionRepository, DepartmentSecurity departmentSecurity) {
-        this.documentRepository = documentRepository;
-        this.departmentRepository = departmentRepository;
-        this.revisionRepository = revisionRepository;
-        this.departmentSecurity = departmentSecurity;
-    }
 
     @Transactional
     public DocumentResponse saveDocument(CreateDocumentRequest createDocumentRequest, User author){
@@ -77,11 +73,17 @@ public class DocumentService{
 
         rejectDangerousHtml(createDocumentRequest.contentMarkdown());
 
-        Document newDocument = new Document(createDocumentRequest.title(), createDocumentRequest.contentMarkdown(),
-                newDepartment, slug, pathParent, createDocumentRequest.position(), author);
+        Document newDocument = Document.builder().title(createDocumentRequest.title())
+                .contentMarkdown(createDocumentRequest.contentMarkdown())
+                .department(newDepartment)
+                .slug(slug)
+                .path(pathParent)
+                .position(createDocumentRequest.position())
+                .createdBy(author)
+                .build();
         newDocument.setParent(parent);
         documentRepository.save(newDocument);
-        revisionRepository.save(new Revision(newDocument, author));
+        revisionRepository.save(Revision.builder().document(newDocument).author(author).build());
 
         return DocumentResponse.from(newDocument);
     }
@@ -101,7 +103,7 @@ public class DocumentService{
         document.setTitle(title);
         document.setContentMarkdown(contentMarkdown);
 
-        revisionRepository.save(new Revision(document, author));
+        revisionRepository.save(Revision.builder().document(document).author(author).build());
     }
 
     @Transactional
@@ -114,6 +116,7 @@ public class DocumentService{
         }
 
         document.setStatus(Status.PUBLISHED);
+        document.setPublishedAt(LocalDateTime.now());
     }
 
     @Transactional
@@ -142,6 +145,53 @@ public class DocumentService{
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
 
     }
+
+    @Transactional(readOnly = true)
+    public DocumentResponse getForEdit(Long id, User user) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
+
+        if (!departmentSecurity.canEdit(user, document)) {
+            throw new EntityNotFoundException("Documento não encontrado");
+        }
+
+        return DocumentResponse.from(document);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> getDrafts(Long departmentId, User user) {
+        if (!departmentSecurity.canContribute(user, departmentId)) {
+            return List.of();
+        }
+
+        return documentRepository.findByDepartmentIdAndStatus(departmentId, Status.DRAFT).stream()
+                .map(DocumentResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> getDepartmentDocuments(Long departmentId, User user) {
+        if (!departmentSecurity.canContribute(user, departmentId)) {
+            return List.of();
+        }
+
+        return documentRepository.findByDepartmentIdAndStatus(departmentId, Status.PUBLISHED).stream()
+                .map(DocumentResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public void unpublishDocument(Long id, User user) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
+
+        if (!departmentSecurity.isManager(user, document.getDepartment().getId())) {
+            throw new AccessDeniedException("Só o gestor do departamento pode despublicar");
+        }
+
+        document.setStatus(Status.DRAFT);
+    }
+
 
     @Transactional(readOnly = true)
     public List<DocumentTreeNode> getTree(User user) {

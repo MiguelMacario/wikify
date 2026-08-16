@@ -9,6 +9,7 @@ import com.wikify.repositories.DocumentRepository;
 import com.wikify.repositories.RevisionRepository;
 import com.wikify.security.DepartmentSecurity;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,17 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class RevisionService {
 
     private final RevisionRepository revisionRepository;
     private final DepartmentSecurity departmentSecurity;
     private final DocumentRepository documentRepository;
-
-    public RevisionService(RevisionRepository revisionRepository, DepartmentSecurity departmentSecurity, DocumentRepository documentRepository) {
-        this.revisionRepository = revisionRepository;
-        this.departmentSecurity = departmentSecurity;
-        this.documentRepository = documentRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<RevisionDTO> getRevisions(Long documentId, User user) {
@@ -65,7 +61,7 @@ public class RevisionService {
         document.setTitle(revision.getTitle());
         document.setContentMarkdown(revision.getContentMarkdown());
 
-        Revision nova = revisionRepository.save(new Revision(document, user));
+        Revision nova = revisionRepository.save(Revision.builder().document(document).author(user).build());
 
         return RevisionResponse.from(nova);
     }

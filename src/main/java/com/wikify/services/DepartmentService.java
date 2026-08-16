@@ -1,6 +1,7 @@
 package com.wikify.services;
 
 import com.wikify.dto.DepartmentDTO;
+import com.wikify.dto.MemberResponse;
 import com.wikify.entity.Department;
 import com.wikify.entity.DepartmentMembership;
 import com.wikify.entity.User;
@@ -9,6 +10,7 @@ import com.wikify.repositories.DepartmentMembershipRepository;
 import com.wikify.repositories.DepartmentRepository;
 import com.wikify.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,18 +21,12 @@ import java.util.Locale;
 
 
 @Service
+@RequiredArgsConstructor
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final DepartmentMembershipRepository departmentMembershipRepository;
     private final UserRepository userRepository;
-
-    public DepartmentService(DepartmentRepository departmentRepository, DepartmentMembershipRepository departmentMembershipRepository, UserRepository userRepository) {
-        this.departmentRepository = departmentRepository;
-        this.departmentMembershipRepository = departmentMembershipRepository;
-        this.userRepository = userRepository;
-    }
-
 
     public List<DepartmentDTO> getDepartments() {
         List<DepartmentDTO> departments = new ArrayList<>();
@@ -38,6 +34,13 @@ public class DepartmentService {
         return departments;
     }
 
+
+    @Transactional(readOnly = true)
+    public List<MemberResponse> getMembers(Long departmentId) {
+        return departmentMembershipRepository.findByDepartmentIdWithUser(departmentId).stream()
+                .map(MemberResponse::from)
+                .toList();
+    }
 
     @Transactional
     public void createDepartment(Long userId,String name, String slug) {
@@ -47,7 +50,7 @@ public class DepartmentService {
             throw new IllegalArgumentException("Esse dapartamento já existe");
         }
 
-        Department savedDepartment = departmentRepository.save(new Department(name, slugified));
+        Department savedDepartment = departmentRepository.save(Department.builder().name(name).slug(slugified).build());
         addMember(savedDepartment.getId(), userId, DepartmentRole.MANAGER);
     }
 
@@ -61,7 +64,7 @@ public class DepartmentService {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("Usuario não encontrado " + userId));
         Department department = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado " + departmentId));
 
-        departmentMembershipRepository.save(new DepartmentMembership(user, department, role));
+        departmentMembershipRepository.save(DepartmentMembership.builder().user(user).department(department).role(role).build());
     }
 
     @Transactional
