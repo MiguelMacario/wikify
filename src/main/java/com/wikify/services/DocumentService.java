@@ -8,6 +8,7 @@ import com.wikify.entity.Department;
 import com.wikify.entity.Document;
 import com.wikify.entity.Revision;
 import com.wikify.entity.User;
+import com.wikify.content.MarkdownGuard;
 import com.wikify.entity.enums.Status;
 import com.wikify.repositories.DepartmentRepository;
 import com.wikify.repositories.DocumentRepository;
@@ -30,8 +31,6 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 @Service
@@ -83,7 +82,7 @@ public class DocumentService{
                 .build();
         newDocument.setParent(parent);
         documentRepository.save(newDocument);
-        revisionRepository.save(Revision.builder().document(newDocument).author(author).build());
+        revisionRepository.save(Revision.snapshotOf(newDocument, author));
 
         return DocumentResponse.from(newDocument);
     }
@@ -103,7 +102,7 @@ public class DocumentService{
         document.setTitle(title);
         document.setContentMarkdown(contentMarkdown);
 
-        revisionRepository.save(Revision.builder().document(document).author(author).build());
+        revisionRepository.save(Revision.snapshotOf(document, author));
     }
 
     @Transactional
@@ -275,29 +274,8 @@ public class DocumentService{
         }
     }
 
-
-    private static final Pattern DANGER_HTML = Pattern.compile(
-            "<\\s*script"
-                    + "|<\\s*iframe"
-                    + "|<\\s*object"
-                    + "|<\\s*embed"
-                    + "|javascript\\s*:"
-                    + "|[\\s/]on\\w+\\s*=",
-            Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern CODE_BLOCK = Pattern.compile(
-            "```[\\s\\S]*?```" +
-                    "|`[^`\\n]*`");
-
     private void rejectDangerousHtml(String content) {
-        String codeBlock = CODE_BLOCK.matcher(content).replaceAll("");
-        Matcher matcher = DANGER_HTML.matcher(codeBlock);
-
-        if (matcher.find()) {
-            throw new IllegalArgumentException(
-                    "O conteúdo contém HTML não permitido: \"" + matcher.group().trim() + "\". "
-                            + "Markdown é aceito normalmente; script, iframe e atributos de evento não.");
-        }
+        MarkdownGuard.rejectDangerousHtml(content);
     }
 
 

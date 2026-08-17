@@ -61,7 +61,7 @@ public class RevisionService {
         document.setTitle(revision.getTitle());
         document.setContentMarkdown(revision.getContentMarkdown());
 
-        Revision nova = revisionRepository.save(Revision.builder().document(document).author(user).build());
+        Revision nova = revisionRepository.save(Revision.snapshotOf(document, user));
 
         return RevisionResponse.from(nova);
     }

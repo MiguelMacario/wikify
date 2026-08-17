@@ -41,10 +41,12 @@ public class Document {
 
     private int position;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.DRAFT;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "edit_policy", nullable = false)
     private EditPolicy editPolicy = EditPolicy.DEPARTMENT;
@@ -59,6 +61,7 @@ public class Document {
     @Column(name = "created_at")
     @CreationTimestamp
     private LocalDateTime createdAt;
+
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;

@@ -73,7 +73,9 @@ public class AuthService {
         LoginResponseDTO response = new LoginResponseDTO(
                 tokenService.generateAccessToken(user),
                 user.getSystemRole(),
-                departments);
+                departments,
+                user.getId(),
+                user.getName());
 
         return new AuthResult(
                 tokenService.generateRefreshToken(user.getLogin()),

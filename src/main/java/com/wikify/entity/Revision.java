@@ -38,11 +38,13 @@ public class Revision {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    public Revision(Document document,  User author) {
-        this.document = document;
-        this.title = document.getTitle();
-        this.contentMarkdown = document.getContentMarkdown();
-        this.author = author;
+    public static Revision snapshotOf(Document document, User author) {
+        return Revision.builder()
+                .document(document)
+                .author(author)
+                .title(document.getTitle())
+                .contentMarkdown(document.getContentMarkdown())
+                .build();
     }
 
 

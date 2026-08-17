@@ -143,8 +143,6 @@ public class DocumentController {
         }
     }
 
-
-
     @GetMapping("/{id}/revisions")
     public ResponseEntity<List<RevisionDTO>> getRevisions(@PathVariable Long id, @AuthenticationPrincipal User user) {
         try {
@@ -177,6 +175,5 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
     }
-
 
 }

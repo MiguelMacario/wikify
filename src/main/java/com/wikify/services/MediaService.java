@@ -82,20 +82,6 @@ public class MediaService {
         return MediaResponse.from(media);
     }
 
-    private MediaContent openReadable(UUID id, User user) {
-        Media media = mediaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Mídia não encontrada"));
-
-        if (!departmentSecurity.canRead(user, media.getDepartment().getId())) {
-            throw new EntityNotFoundException("Mídia não encontrada");
-        }
-
-        return new MediaContent(
-                storage.open(media.getStorageKey()),
-                media.getContentType(),
-                media.getSizeBytes());
-    }
-
     @Transactional(readOnly = true)
     public ResponseEntity<ResourceRegion> getPartialMedia(HttpHeaders headers, UUID id, User user) {
         long left = 1024 * 1024;
@@ -118,6 +104,7 @@ public class MediaService {
 
     }
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Resource> getMedia(HttpHeaders headers, UUID id, User user){
         MediaContent mediaContent = openReadable(id, user);
         MediaType type = MediaType.parseMediaType(mediaContent.contentType());
@@ -126,5 +113,19 @@ public class MediaService {
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate())
                 .body(mediaContent.resource());
+    }
+
+    private MediaContent openReadable(UUID id, User user) {
+        Media media = mediaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Mídia não encontrada"));
+
+        if (!departmentSecurity.canRead(user, media.getDepartment().getId())) {
+            throw new EntityNotFoundException("Mídia não encontrada");
+        }
+
+        return new MediaContent(
+                storage.open(media.getStorageKey()),
+                media.getContentType(),
+                media.getSizeBytes());
     }
 }
