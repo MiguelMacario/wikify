@@ -3,9 +3,11 @@ package com.wikify.services;
 import com.wikify.dto.DepartmentDTO;
 import com.wikify.dto.MemberResponse;
 import com.wikify.entity.Department;
+import com.wikify.entity.DepartmentApprovalPublish;
 import com.wikify.entity.DepartmentMembership;
 import com.wikify.entity.User;
 import com.wikify.entity.enums.DepartmentRole;
+import com.wikify.repositories.DepartmentApprovalPublishRepository;
 import com.wikify.repositories.DepartmentMembershipRepository;
 import com.wikify.repositories.DepartmentRepository;
 import com.wikify.repositories.UserRepository;
@@ -27,6 +29,7 @@ public class DepartmentService {
     private final DepartmentRepository departmentRepository;
     private final DepartmentMembershipRepository departmentMembershipRepository;
     private final UserRepository userRepository;
+    private final DepartmentApprovalPublishRepository departmentApprovalPublishRepository;
 
     public List<DepartmentDTO> getDepartments() {
         List<DepartmentDTO> departments = new ArrayList<>();
@@ -52,6 +55,8 @@ public class DepartmentService {
 
         Department savedDepartment = departmentRepository.save(Department.builder().name(name).slug(slugified).build());
         addMember(savedDepartment.getId(), userId, DepartmentRole.MANAGER);
+        DepartmentApprovalPublish departmentApprovalPublish = DepartmentApprovalPublish.builder().department(savedDepartment).build();
+        departmentApprovalPublishRepository.save(departmentApprovalPublish);
     }
 
     @Transactional

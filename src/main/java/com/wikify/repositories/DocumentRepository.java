@@ -3,6 +3,7 @@ package com.wikify.repositories;
 import com.wikify.dto.DocumentSearchProjection;
 import com.wikify.entity.Document;
 import com.wikify.entity.enums.Status;
+import com.wikify.entity.enums.Validation;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +20,11 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     @EntityGraph(attributePaths = "createdBy")
     List<Document> findByDepartmentIdAndStatus(Long departmentId, Status status);
+
+    @EntityGraph(attributePaths = "createdBy")
+    List<Document> findByDepartmentIdAndValidation(Long departmentId, Validation validation);
+
+    List<Document> findByDepartmentIdAndStatusAndValidation(Long departmentId, Status status, Validation validation);
 
     Optional<Document> findByIdAndStatus(Long id, Status status);
 

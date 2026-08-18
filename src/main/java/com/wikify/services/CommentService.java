@@ -44,7 +44,9 @@ public class CommentService {
     @Transactional
     public void createComment(CommentDTO commentDTO, User user, Long documentId) {
 
-        Document document = documentRepository.getById(documentId);
+        Document document = documentRepository.findById(documentId).orElseThrow(
+                () -> new EntityNotFoundException("Comentario não encontrado")
+        );
 
         if(!departmentSecurity.canRead(user, document.getDepartment().getId())) {
             throw new AccessDeniedException("Sem acesso ao comentarios");
@@ -58,8 +60,12 @@ public class CommentService {
 
     @Transactional
     public void deleteComment(Long commentId, User user, Long documentId) {
-        Comment comment = commentRepository.getById(commentId);
-        Document document = documentRepository.getById(documentId);
+        Comment comment = commentRepository.findById(commentId).orElseThrow(
+                () -> new EntityNotFoundException("Comentario não encontrado")
+        );;
+        Document document = documentRepository.findById(documentId).orElseThrow(
+                () -> new EntityNotFoundException("Documento não encontrado")
+        );;
 
         if(!comment.getAuthor().getId().equals(user.getId()) && !departmentSecurity.isManager(user, document.getDepartment().getId())) {
             throw new AccessDeniedException("O comentario não pode ser deletado");

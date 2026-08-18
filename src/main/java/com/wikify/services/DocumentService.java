@@ -1,19 +1,11 @@
 package com.wikify.services;
 
-import com.wikify.dto.CreateDocumentRequest;
-import com.wikify.dto.DocumentResponse;
-import com.wikify.dto.DocumentSearchProjection;
-import com.wikify.dto.DocumentTreeNode;
-import com.wikify.entity.Department;
-import com.wikify.entity.Document;
-import com.wikify.entity.Revision;
-import com.wikify.entity.User;
+import com.wikify.dto.*;
+import com.wikify.entity.*;
 import com.wikify.content.MarkdownGuard;
 import com.wikify.entity.enums.Status;
-import com.wikify.repositories.DepartmentRepository;
-import com.wikify.repositories.DocumentRepository;
-import com.wikify.repositories.RevisionRepository;
-import com.wikify.repositories.UserRepository;
+import com.wikify.entity.enums.Validation;
+import com.wikify.repositories.*;
 import com.wikify.security.DepartmentSecurity;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +33,7 @@ public class DocumentService{
     private final DepartmentRepository departmentRepository;
     private final RevisionRepository revisionRepository;
     private final DepartmentSecurity departmentSecurity;
+    private final DepartmentApprovalPublishRepository departmentApprovalPublishRepository;
 
     @Transactional
     public DocumentResponse saveDocument(CreateDocumentRequest createDocumentRequest, User author){
@@ -101,6 +94,12 @@ public class DocumentService{
 
         document.setTitle(title);
         document.setContentMarkdown(contentMarkdown);
+        if (document.getStatus().equals(Status.PUBLISHED) && document.getValidation().equals(Validation.APPROVED)) {
+            document.setStatus(Status.DRAFT);
+            document.setValidation(Validation.PENDING);
+        }
+        document.setValidationAt(null);
+        document.setValidationBy(null);
 
         revisionRepository.save(Revision.snapshotOf(document, author));
     }
@@ -114,8 +113,27 @@ public class DocumentService{
             throw new AccessDeniedException("Você não contribui com esse departamento");
         }
 
-        document.setStatus(Status.PUBLISHED);
-        document.setPublishedAt(LocalDateTime.now());
+        approvedAndPublish(document, author);
+    }
+
+    @Transactional
+    public void rejectDocument(RejectDTO rejectDTO, Long documentId, User user) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
+
+        if (!departmentSecurity.isManager(user, document.getDepartment().getId())) {
+            throw new AccessDeniedException("Você não tem permissão para realizar esta ação");
+        }
+
+        if (rejectDTO.rejectionReason() == null || rejectDTO.rejectionReason().isBlank()) {
+            throw new IllegalArgumentException("A razão da rejeição não pode estar vazia");
+        }
+
+        document.setValidation(Validation.REJECTED);
+        document.setRejectionReason(rejectDTO.rejectionReason());
+        document.setStatus(Status.DRAFT);
+        document.setValidationBy(user);
+        document.setValidationAt(LocalDateTime.now());
     }
 
     @Transactional
@@ -164,6 +182,23 @@ public class DocumentService{
         }
 
         return documentRepository.findByDepartmentIdAndStatus(departmentId, Status.DRAFT).stream()
+                .filter(doc -> departmentSecurity.canEdit(user, doc))
+                .map(DocumentResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> getPendingDocuments(Long departmentId, User user) {
+        if (!departmentSecurity.canContribute(user, departmentId)) {
+            return List.of();
+        }
+
+        if (!departmentSecurity.isManager(user, departmentId)) {
+            return List.of();
+        }
+
+        return documentRepository.findByDepartmentIdAndValidation(departmentId, Validation.PENDING).stream()
+                .filter(doc -> departmentSecurity.canEdit(user, doc))
                 .map(DocumentResponse::from)
                 .toList();
     }
@@ -175,12 +210,13 @@ public class DocumentService{
         }
 
         return documentRepository.findByDepartmentIdAndStatus(departmentId, Status.PUBLISHED).stream()
+                .filter(doc -> departmentSecurity.canEdit(user, doc))
                 .map(DocumentResponse::from)
                 .toList();
     }
 
     @Transactional
-    public void unpublishDocument(Long id, User user) {
+    public void unpublishDocument(Long id, User user, RejectDTO rejectDTO) {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
 
@@ -188,7 +224,15 @@ public class DocumentService{
             throw new AccessDeniedException("Só o gestor do departamento pode despublicar");
         }
 
+        if (rejectDTO == null || rejectDTO.rejectionReason() == null || rejectDTO.rejectionReason().isBlank()) {
+            throw new IllegalArgumentException("O motivo da despublicação é obrigatório");
+        }
+
         document.setStatus(Status.DRAFT);
+        document.setValidation(Validation.REJECTED);
+        document.setRejectionReason(rejectDTO.rejectionReason());
+        document.setValidationBy(user);
+        document.setValidationAt(LocalDateTime.now());
     }
 
 
@@ -278,5 +322,47 @@ public class DocumentService{
         MarkdownGuard.rejectDangerousHtml(content);
     }
 
+    private void approvedAndPublish(Document document, User user) {
+        DepartmentApprovalPublish approval = departmentApprovalPublishRepository.findByDepartmentId(document.getDepartment().getId())
+                .orElseThrow(() -> new EntityNotFoundException("Configuração não encontrada"));
+
+        if (approval.isApprovePublish()){
+            if(departmentSecurity.isManager(user, document.getDepartment().getId())) {
+                document.setStatus(Status.PUBLISHED);
+                document.setValidation(Validation.APPROVED);
+                document.setValidationBy(user);
+                document.setPublishedAt(LocalDateTime.now());
+                document.setValidationAt(LocalDateTime.now());
+            } else {
+                document.setValidation(Validation.PENDING);
+            }
+        } else {
+            document.setStatus(Status.PUBLISHED);
+            document.setValidation(Validation.PENDING);
+            document.setPublishedAt(LocalDateTime.now());
+        }
+
+        document.setRejectionReason(null);
+    }
+
+    @Transactional
+    public void approveDocument(Long id, User user) {
+
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Documento não encontrado"));
+
+        DepartmentApprovalPublish approval = departmentApprovalPublishRepository.findByDepartmentId(document.getDepartment().getId())
+                .orElseThrow(() -> new EntityNotFoundException("Configuração não encontrada"));
+
+        if(!departmentSecurity.isManager(user, document.getDepartment().getId())) {
+            throw new AccessDeniedException("Sem acesso a essa ação");
+        }
+
+        document.setStatus(Status.PUBLISHED);
+        document.setValidation(Validation.APPROVED);
+        document.setValidationBy(user);
+        document.setPublishedAt(LocalDateTime.now());
+        document.setValidationAt(LocalDateTime.now());
+    }
 
 }

@@ -3,6 +3,7 @@ package com.wikify.entity;
 
 import com.wikify.entity.enums.EditPolicy;
 import com.wikify.entity.enums.Status;
+import com.wikify.entity.enums.Validation;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -48,8 +49,13 @@ public class Document {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Validation validation = Validation.NONE;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "edit_policy", nullable = false)
-    private EditPolicy editPolicy = EditPolicy.DEPARTMENT;
+    private EditPolicy editPolicy = EditPolicy.AUTHOR_ONLY;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
@@ -66,8 +72,17 @@ public class Document {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "validation_at")
+    private LocalDateTime validationAt;
+
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "validation_by")
+    private User validationBy;
+
+    private String rejectionReason;
 
 
     public boolean isRoot() {

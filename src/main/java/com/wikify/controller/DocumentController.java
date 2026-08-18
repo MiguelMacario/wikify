@@ -47,6 +47,18 @@ public class DocumentController {
         }
     }
 
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<Void> approveDocument(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        try {
+            documentService.approveDocument(id, user);
+            return ResponseEntity.ok().build();
+        } catch(EntityNotFoundException e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }  catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Void> UpdateDocument(@PathVariable Long id, @RequestBody UpdateDocumentRequest updateDocumentRequest, @AuthenticationPrincipal User user) {
@@ -109,6 +121,30 @@ public class DocumentController {
         }
     }
 
+    @GetMapping("/review/{departmentId}")
+    public ResponseEntity<List<DocumentResponse>> getPendingDocuments(@PathVariable Long departmentId ,@AuthenticationPrincipal User user) {
+        try {
+            return ResponseEntity.ok(documentService.getPendingDocuments(departmentId, user));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Void> rejectDocument(@PathVariable Long id, @AuthenticationPrincipal User user, @RequestBody RejectDTO rejectDTO) {
+        try {
+            documentService.rejectDocument(rejectDTO, id, user);
+            return ResponseEntity.ok().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+
     @GetMapping("/edit/{departmentId}")
     public ResponseEntity<List<DocumentResponse>> getDraftDocuments(@PathVariable Long departmentId ,@AuthenticationPrincipal User user) {
         try {
@@ -132,9 +168,9 @@ public class DocumentController {
     }
 
     @PostMapping("/{id}/unpublish")
-    public ResponseEntity<Void> unpublishDocument(@PathVariable Long id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<Void> unpublishDocument(@PathVariable Long id, @AuthenticationPrincipal User user, @RequestBody RejectDTO rejectDTO) {
         try {
-            documentService.unpublishDocument(id, user);
+            documentService.unpublishDocument(id, user, rejectDTO);
             return ResponseEntity.ok().build();
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

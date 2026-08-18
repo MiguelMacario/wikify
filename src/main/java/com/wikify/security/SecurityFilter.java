@@ -34,8 +34,6 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String login = loginFromHeader(request);
 
-        // Só se o header não autenticou: o token de mídia é a exceção, não a
-        // regra, e nunca deve ganhar do caminho normal.
         if (login == null && isMediaRequest(request)) {
             login = loginFromMediaCookie(request);
         }
@@ -56,13 +54,6 @@ public class SecurityFilter extends OncePerRequestFilter {
         return tokenService.validateAccessToken(authHeader.substring(BEARER_PREFIX.length()).trim());
     }
 
-    /**
-     * O `path=/media` do cookie faz o NAVEGADOR não mandá-lo para outras rotas,
-     * mas isso é conveniência do navegador, não garantia: um cliente qualquer
-     * manda o cookie que quiser para onde quiser. Por isso a rota é conferida
-     * aqui também — é esta checagem que impede o token de mídia de autenticar
-     * uma escrita em /docs.
-     */
     private boolean isMediaRequest(HttpServletRequest request) {
         return request.getRequestURI().startsWith(MEDIA_PATH);
     }

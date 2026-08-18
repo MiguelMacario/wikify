@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 public record DocumentResponse(Long id, String title, String content, String slug, String path,
                                Long departmentId, Long parentId, int position, String status,
-                               String authorName, LocalDateTime publishedAt) {
+                               String authorName, LocalDateTime publishedAt, String validation, String rejectionReason) {
 
     public static DocumentResponse from(Document document) {
         return new DocumentResponse(
@@ -20,7 +20,9 @@ public record DocumentResponse(Long id, String title, String content, String slu
                 document.getPosition(),
                 document.getStatus().toString(),
                 document.getCreatedBy().getName(),
-                document.getPublishedAt());
+                document.getPublishedAt(),
+                document.getValidation().toString(),
+                document.getRejectionReason());
     }
 
 
